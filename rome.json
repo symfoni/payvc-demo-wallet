@@ -12,7 +12,10 @@
         "useSelfClosingElements": "off",
         "noImplicitBoolean": "off"
       },
-      "correctness": {}
+      "correctness": {},
+      "complexity": {
+        "useSimplifiedLogicExpression": "off"
+      }
     }
   }
 }

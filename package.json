@@ -20,6 +20,7 @@
     "@polkadot/keyring": "^10.1.2",
     "@polkadot/types": "^9.3.3",
     "@solana/web3.js": "1.43.0",
+    "@symfoni/vc-tools": "^0.0.24",
     "@trpc/client": "^10.0.0",
     "@trpc/server": "^10.0.0",
     "@walletconnect/client": "1.8.0",
@@ -39,7 +40,8 @@
     "react-qr-reader-es6": "2.2.1-2",
     "solana-wallet": "^1.0.2",
     "superjson": "^1.11.0",
-    "valtio": "1.6.0"
+    "valtio": "1.6.0",
+    "zustand": "^4.1.4"
   },
   "devDependencies": {
     "@types/node": "17.0.35",

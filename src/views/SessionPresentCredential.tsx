@@ -6,29 +6,21 @@ import ModalStore from "@/store/ModalStore";
 import { approveEIP155Request, rejectEIP155Request } from "@/utils/EIP155RequestHandlerUtil";
 import { signClient } from "@/utils/WalletConnectUtil";
 import { Button, Col, Container, Divider, Modal, Row, Spacer, Text } from "@nextui-org/react";
-import { createTRPCProxyClient, httpBatchLink, httpLink } from "@trpc/client";
+
 import { Fragment, useEffect, useState } from "react";
-import type { AppRouter } from "../../../payvc-demo/src/server/routers/_app";
-import superjson from "superjson";
-const PAY_VC_URL = "http://localhost:3000";
+import { useVcStore } from "../store/VcStore";
+import { checkPayVC, trpcClient } from "../utils/trpc";
 
-const trpcClient = createTRPCProxyClient<AppRouter>({
-	links: [
-		httpLink({
-			url: `${PAY_VC_URL}/api/trpc`,
-		}),
-	],
-	transformer: superjson,
-});
-
-const walletID = "0x777"
+const walletID = "0x777";
 
 export default function SessionPresentCredential() {
 	const [credentialOffers, setCredentialOffers] =
 		useState<Awaited<ReturnType<typeof trpcClient.credentialOffer.listBy.query>>>();
-	const [requisition, setRequisition] =
-		useState<Awaited<ReturnType<typeof trpcClient.requsition.get.query>>>();
+	const [requisition, setRequisition] = useState<Awaited<ReturnType<typeof trpcClient.requsition.get.query>>>();
+	const [transaction, setTransaction] =
+		useState<Awaited<ReturnType<typeof trpcClient.credentialOffer.selectIssuer.mutate>>>();
 	// Get request and wallet data from store
+	const { saveTransaction, transactions } = useVcStore();
 	const requestEvent = ModalStore.state.data?.requestEvent;
 	const requestSession = ModalStore.state.data?.requestSession;
 
@@ -44,20 +36,51 @@ export default function SessionPresentCredential() {
 	// get requisitionID from params
 	const requisitionId = request.params[0] as string;
 
-	async function checkPayVC() {
-		const req = await fetch(`${PAY_VC_URL}/api/trpc/healthcheck`);
-		const json = await req.json();
-		console.log(json);
-	}
+	useEffect(() => {
+		let subscribed = true;
+		const doAsync = async () => {
+			await checkPayVC();
+			const requisition = await fetchRequisition(requisitionId);
+			const credentialOffersList = await fetchCredentialOffers(requisitionId);
+			if (subscribed) {
+				setRequisition(requisition);
+				setCredentialOffers(credentialOffersList);
+			}
+		};
+		doAsync();
+		return () => {
+			subscribed = false;
+			setCredentialOffers(undefined);
+			setRequisition(undefined);
+			setTransaction(undefined);
+		};
+	}, [requisitionId]);
 
-  async function fetchRequisition(requisitionId: string) {
+	useEffect(() => {
+		let subscribed = true;
+		const doAsync = async () => {
+			// await checkPayVC();
+			// const requisition = await fetchRequisition(requisitionId);
+			// const credentialOffersList = await fetchCredentialOffers(requisitionId);
+			// if (subscribed) {
+			// 	setRequisition(requisition);
+			// 	setCredentialOffers(credentialOffersList);
+			// }
+		};
+		doAsync();
+		return () => {
+			subscribed = false;
+		};
+	}, [transaction]);
+
+	async function fetchRequisition(requisitionId: string) {
 		console.log(requisitionId);
 		const requisition = await trpcClient.requsition.get.query({ id: requisitionId });
 		if (!requisition) {
 			throw new Error("No credential offers found");
 		}
 		console.log("requisition", requisition);
-    return requisition
+		return requisition;
 	}
 
 	async function fetchCredentialOffers(requisitionId: string) {
@@ -67,31 +90,36 @@ export default function SessionPresentCredential() {
 			throw new Error("No credential offers found");
 		}
 		console.log("credentialOffersList", credentialOffersList);
-    return credentialOffersList
+		return credentialOffersList;
 	}
 	async function selectCredentialOffer(requisitionId: string, credentialOfferId: string) {
 		console.log(requisitionId);
-		const m = await trpcClient.credentialOffer.selectIssuer.mutate({ 
-      credentialOfferId,
-      requsitionId: requisitionId,
-      walletId: walletID 
-     });
-		if (!credentialOffersList.items || credentialOffersList.items.length === 0) {
-			throw new Error("No credential offers found");
-		}
-		console.log("credentialOffersList", credentialOffersList);
-    return credentialOffersList
+		const transaction = await trpcClient.credentialOffer.selectIssuer.mutate({
+			credentialOfferId,
+			requsitionId: requisitionId,
+			walletId: walletID,
+		});
+		console.log("transaction", transaction);
+		setTransaction(transaction);
+		return transaction;
 	}
 
 	// Handle approve action (logic varies based on request method)
 	async function onApprove() {
 		if (requestEvent) {
-			const response = await approveEIP155Request(requestEvent);
-			await signClient.respond({
-				topic,
-				response,
-			});
-			ModalStore.close();
+			if (transaction) {
+				saveTransaction(transaction);
+				// const response = await approveEIP155Request(requestEvent);
+				await signClient.respond({
+					topic,
+					response: {
+						id: requestEvent.id,
+						jsonrpc: "2.0",
+						result: [transaction.id],
+					},
+				});
+				ModalStore.close();
+			}
 		}
 	}
 
@@ -106,24 +134,6 @@ export default function SessionPresentCredential() {
 			ModalStore.close();
 		}
 	}
-	useEffect(() => {
-		let subscribed = true;
-		const doAsync = async () => {
-      await checkPayVC();
-      const requisition = await fetchRequisition(requisitionId);
-      const credentialOffersList = await fetchCredentialOffers(requisitionId);
-			if (subscribed) {
-        setRequisition(requisition);
-        setCredentialOffers(credentialOffersList);
-			}
-		};
-		doAsync();
-		return () => {
-			subscribed = false;
-      setCredentialOffers(undefined);
-      setRequisition(undefined);
-		};
-	}, [requisitionId]);
 
 	return (
 		<Fragment>
@@ -136,9 +146,8 @@ export default function SessionPresentCredential() {
 					<Col>
 						<Text h5>Requisition</Text>
 						<Text color="$gray400">{`id: ${requisitionId}`}</Text>
-            {requisition && <Text color="$gray400">{`Name: ${requisition.credentialType.name}`}</Text>}
+						{requisition && <Text color="$gray400">{`Name: ${requisition.credentialType.name}`}</Text>}
 						<Spacer></Spacer>
-
 					</Col>
 				</Row>
 
@@ -146,23 +155,31 @@ export default function SessionPresentCredential() {
 				<Row>
 					<Col>
 						<Text h5>Credential Offers</Text>
-            
+						<Spacer></Spacer>
 						{credentialOffers?.items.map((credentialOffer) => (
 							<Row>
-                <Col>
-               <Container>
-               <Text color="$gray400">{credentialOffer.name}</Text>
-                  <Text color="$gray400">{credentialOffer.price}</Text>
-                  <Text color="$gray400">{credentialOffer.issuer.name}</Text>
-                  <Button size={"sm"}>Select issuer</Button>
-                  <Spacer></Spacer>
-               </Container>
-                </Col>
-              </Row>
+								<Col>
+									<Container>
+										<Text color="$gray400">Type: {credentialOffer.name}</Text>
+										<Text color="$gray400">Issuer: {credentialOffer.issuer.name}</Text>
+										{credentialOffer.parentRequirement && (
+											<>
+												<Text h6>Requirements</Text>
+												<Text color="$gray400">Type: {credentialOffer.parentRequirement.credentialType.name}</Text>
+												<Text color="$gray400">Issuer: {credentialOffer.parentRequirement.issuer.name}</Text>
+											</>
+										)}
+										<Button size={"sm"} onPress={() => selectCredentialOffer(requisitionId, credentialOffer.id)}>
+											Select credential offer
+										</Button>
+									</Container>
+								</Col>
+							</Row>
 						))}
 					</Col>
 				</Row>
 
+				<Spacer></Spacer>
 				<RequestMethodCard methods={[request.method]} />
 			</RequestModalContainer>
 
@@ -170,8 +187,8 @@ export default function SessionPresentCredential() {
 				<Button auto flat color="error" onClick={onReject}>
 					Reject
 				</Button>
-				<Button auto flat color="success" onClick={onApprove}>
-					Approve
+				<Button auto flat color="success" onClick={onApprove} disabled={!transaction}>
+					{transaction ? "Approve" : "Select a credential offer first"}
 				</Button>
 			</Modal.Footer>
 		</Fragment>
