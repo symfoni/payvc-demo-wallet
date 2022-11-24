@@ -87,6 +87,7 @@ export const EIP155_SIGNING_METHODS = {
 	ETH_SIGN_TYPED_DATA_V4: "eth_signTypedData_v4",
 	ETH_SEND_RAW_TRANSACTION: "eth_sendRawTransaction",
 	ETH_SEND_TRANSACTION: "eth_sendTransaction",
+	REQUEST_CREDENTIAL: "request_credential",
 	PRESENT_CREDENTIAL: "present_credential",
 	RECEIVE_CREDENTIAL: "receive_credential",
 };

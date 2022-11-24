@@ -12,13 +12,20 @@ import { Fragment } from "react";
 import { useSnapshot } from "valtio";
 import { NEAR_TEST_CHAINS } from "@/data/NEARData";
 import { useVcStore } from "../store/VcStore";
-import { PAY_VC_URL } from "../utils/trpc";
+import { DEMO_VERIFIER_URL, PAY_VC_URL, trpcClient } from "../utils/trpc";
 
 export default function HomePage() {
 	const { testNets, eip155Address, cosmosAddress, solanaAddress, polkadotAddress, nearAddress, elrondAddress } =
 		useSnapshot(SettingsStore.state);
 	const { transactions, vcs, removeTransaction } = useVcStore();
 	console.log(vcs);
+
+	// async function presentCredential(transactionId: string) {
+	// 	const fullfilled = await trpcClient.transaction.fullfill.mutate({ transactionId });
+	// 	if (fullfilled) {
+	// 		removeTransaction(transactionId);
+	// 	}
+	// }
 	return (
 		<Fragment>
 			<PageHeader title="Accounts">
@@ -76,10 +83,10 @@ export default function HomePage() {
 								as="a"
 								href={`${PAY_VC_URL}/issuer-service/${transaction.credentialOffer?.issuer.slug}`}
 								target="_blank"
-								disabled={!hasParentVC}
+								disabled={!!hasPrimaryVC}
 							>{`Get ${transaction.credentialOffer?.credentialType.name}`}</Button>
 							<Spacer></Spacer>
-							<Button disabled={!hasPrimaryVC} color={"success"} onPress={() => removeTransaction(transaction.id)}>
+							<Button as="a" target="_blank" href={`${DEMO_VERIFIER_URL}`} disabled={!hasPrimaryVC} color={"success"}>
 								{`Present credential to ${transaction.requsition.verifier.name}`}
 							</Button>
 							<Spacer></Spacer>

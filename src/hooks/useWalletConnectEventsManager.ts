@@ -42,6 +42,8 @@ export default function useWalletConnectEventsManager(initialized: boolean) {
 				return ModalStore.open("SessionSendTransactionModal", { requestEvent, requestSession });
 
 			/* PayVC method */
+			case EIP155_SIGNING_METHODS.REQUEST_CREDENTIAL:
+				return ModalStore.open("SessionRequestCredential", { requestEvent, requestSession });
 			case EIP155_SIGNING_METHODS.PRESENT_CREDENTIAL:
 				return ModalStore.open("SessionPresentCredential", { requestEvent, requestSession });
 			case EIP155_SIGNING_METHODS.RECEIVE_CREDENTIAL:

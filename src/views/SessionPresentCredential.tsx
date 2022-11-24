@@ -5,22 +5,18 @@ import RequestModalContainer from "@/components/RequestModalContainer";
 import ModalStore from "@/store/ModalStore";
 import { approveEIP155Request, rejectEIP155Request } from "@/utils/EIP155RequestHandlerUtil";
 import { signClient } from "@/utils/WalletConnectUtil";
-import { Button, Col, Container, Divider, Modal, Row, Spacer, Text } from "@nextui-org/react";
+import { Button, Card, Col, Container, Divider, Modal, Row, Spacer, Text } from "@nextui-org/react";
 
 import { Fragment, useEffect, useState } from "react";
 import { useVcStore } from "../store/VcStore";
 import { checkPayVC, trpcClient } from "../utils/trpc";
+import { VerifiableCredential } from "@veramo/core";
 
 const walletID = "0x777";
 
 export default function SessionPresentCredential() {
-	const [credentialOffers, setCredentialOffers] =
-		useState<Awaited<ReturnType<typeof trpcClient.credentialOffer.listBy.query>>>();
-	const [requisition, setRequisition] = useState<Awaited<ReturnType<typeof trpcClient.requsition.get.query>>>();
-	const [transaction, setTransaction] =
-		useState<Awaited<ReturnType<typeof trpcClient.credentialOffer.selectIssuer.mutate>>>();
-	// Get request and wallet data from store
-	const { saveTransaction, transactions } = useVcStore();
+	const { vcs } = useVcStore();
+
 	const requestEvent = ModalStore.state.data?.requestEvent;
 	const requestSession = ModalStore.state.data?.requestSession;
 
@@ -34,88 +30,22 @@ export default function SessionPresentCredential() {
 	const { request, chainId } = params;
 
 	// get requisitionID from params
-	const requisitionId = request.params[0] as string;
-
-	useEffect(() => {
-		let subscribed = true;
-		const doAsync = async () => {
-			await checkPayVC();
-			const requisition = await fetchRequisition(requisitionId);
-			const credentialOffersList = await fetchCredentialOffers(requisitionId);
-			if (subscribed) {
-				setRequisition(requisition);
-				setCredentialOffers(credentialOffersList);
-			}
-		};
-		doAsync();
-		return () => {
-			subscribed = false;
-			setCredentialOffers(undefined);
-			setRequisition(undefined);
-			setTransaction(undefined);
-		};
-	}, [requisitionId]);
-
-	useEffect(() => {
-		let subscribed = true;
-		const doAsync = async () => {
-			// await checkPayVC();
-			// const requisition = await fetchRequisition(requisitionId);
-			// const credentialOffersList = await fetchCredentialOffers(requisitionId);
-			// if (subscribed) {
-			// 	setRequisition(requisition);
-			// 	setCredentialOffers(credentialOffersList);
-			// }
-		};
-		doAsync();
-		return () => {
-			subscribed = false;
-		};
-	}, [transaction]);
-
-	async function fetchRequisition(requisitionId: string) {
-		console.log(requisitionId);
-		const requisition = await trpcClient.requsition.get.query({ id: requisitionId });
-		if (!requisition) {
-			throw new Error("No credential offers found");
-		}
-		console.log("requisition", requisition);
-		return requisition;
-	}
-
-	async function fetchCredentialOffers(requisitionId: string) {
-		console.log(requisitionId);
-		const credentialOffersList = await trpcClient.credentialOffer.listBy.query({ requsitionId: requisitionId });
-		if (!credentialOffersList.items || credentialOffersList.items.length === 0) {
-			throw new Error("No credential offers found");
-		}
-		console.log("credentialOffersList", credentialOffersList);
-		return credentialOffersList;
-	}
-	async function selectCredentialOffer(requisitionId: string, credentialOfferId: string) {
-		console.log(requisitionId);
-		const transaction = await trpcClient.credentialOffer.selectIssuer.mutate({
-			credentialOfferId,
-			requsitionId: requisitionId,
-			walletId: walletID,
-		});
-		console.log("transaction", transaction);
-		setTransaction(transaction);
-		return transaction;
-	}
+	const credentialType = request.params[0] as string;
+	const matchedCredentials = vcs.filter((vc) => vc.type?.includes(credentialType));
+	const [selectedCredentail, setSelectedCredentail] = useState<VerifiableCredential>();
 
 	// Handle approve action (logic varies based on request method)
 	async function onApprove() {
 		if (requestEvent) {
-			if (transaction) {
-				saveTransaction(transaction);
+			if (selectedCredentail) {
+				console.log("Sending", selectedCredentail);
 				// const response = await approveEIP155Request(requestEvent);
 				await signClient.respond({
 					topic,
 					response: {
 						id: requestEvent.id,
 						jsonrpc: "2.0",
-						result: [transaction.id],
+						result: [selectedCredentail.proof.jwt],
 					},
 				});
 				ModalStore.close();
@@ -144,37 +74,31 @@ export default function SessionPresentCredential() {
 
 				<Row>
 					<Col>
-						<Text h5>Requisition</Text>
-						<Text color="$gray400">{`id: ${requisitionId}`}</Text>
-						{requisition && <Text color="$gray400">{`Name: ${requisition.credentialType.name}`}</Text>}
+						<Text h5>Your credentials</Text>
 						<Spacer></Spacer>
-					</Col>
-				</Row>
-
-				<Divider y={2} />
-				<Row>
-					<Col>
-						<Text h5>Credential Offers</Text>
-						<Spacer></Spacer>
-						{credentialOffers?.items.map((credentialOffer) => (
-							<Row>
-								<Col>
-									<Container>
-										<Text color="$gray400">Type: {credentialOffer.name}</Text>
-										<Text color="$gray400">Issuer: {credentialOffer.issuer.name}</Text>
-										{credentialOffer.parentRequirement && (
-											<>
-												<Text h6>Requirements</Text>
-												<Text color="$gray400">Type: {credentialOffer.parentRequirement.credentialType.name}</Text>
-												<Text color="$gray400">Issuer: {credentialOffer.parentRequirement.issuer.name}</Text>
-											</>
-										)}
-										<Button size={"sm"} onPress={() => selectCredentialOffer(requisitionId, credentialOffer.id)}>
-											Select credential offer
-										</Button>
-									</Container>
-								</Col>
-							</Row>
+						{matchedCredentials.length === 0 && <Text>No credentials matching</Text>}
+						{matchedCredentials?.map((vc) => (
+							<Card bordered hoverable key={vc.id} onClick={() => setSelectedCredentail(vc)}>
+								<Card.Body>
+									<Text h5>{Array.isArray(vc.type) ? vc.type.join(", ") : vc.type}</Text>
+									<Text color="$gray400">Data:</Text>
+									{Object.entries(vc.credentialSubject).map(([key, value]) => (
+										<Row key={key}>
+											<Col>
+												<Text color="$gray400">{key}</Text>
+											</Col>
+											<Col>
+												<Text color="$gray400">{value as string}</Text>
+											</Col>
+										</Row>
+									))}
+								</Card.Body>
+								<Card.Footer>
+									<Button auto onPress={() => setSelectedCredentail(vc)}>
+										Select
+									</Button>
+								</Card.Footer>
+							</Card>
 						))}
 					</Col>
 				</Row>
@@ -187,8 +111,8 @@ export default function SessionPresentCredential() {
 				<Button auto flat color="error" onClick={onReject}>
 					Reject
 				</Button>
-				<Button auto flat color="success" onClick={onApprove} disabled={!transaction}>
-					{transaction ? "Approve" : "Select a credential offer first"}
+				<Button auto flat color="success" onClick={onApprove} disabled={!selectedCredentail}>
+					{selectedCredentail ? "Approve" : "Select a credential first"}
 				</Button>
 			</Modal.Footer>
 		</Fragment>

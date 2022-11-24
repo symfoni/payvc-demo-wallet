@@ -17,6 +17,7 @@ import { Modal as NextModal } from "@nextui-org/react";
 import { useSnapshot } from "valtio";
 import SessionPresentCredential from "../views/SessionPresentCredential";
 import SessionReceiveCredential from "../views/SessionReceiveCredential";
+import SessionRequestCredential from "../views/SessionRequestCredential";
 
 export default function Modal() {
 	const { open, view } = useSnapshot(ModalStore.state);
@@ -38,6 +39,7 @@ export default function Modal() {
 			{view === "LegacySessionSignTypedDataModal" && <LegacySessionSignTypedDataModal />}
 			{view === "LegacySessionSendTransactionModal" && <LegacySessionSendTransactionModal />}
 			{view === "SessionPresentCredential" && <SessionPresentCredential />}
+			{view === "SessionRequestCredential" && <SessionRequestCredential />}
 			{view === "SessionReceiveCredential" && <SessionReceiveCredential />}
 		</NextModal>
 	);

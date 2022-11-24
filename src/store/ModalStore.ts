@@ -34,6 +34,7 @@ interface State {
 		| "LegacySessionSignModal"
 		| "LegacySessionSignTypedDataModal"
 		| "LegacySessionSendTransactionModal"
+		| "SessionRequestCredential"
 		| "SessionPresentCredential"
 		| "SessionReceiveCredential";
 	data?: ModalData;
