@@ -6,7 +6,7 @@ import ModalStore from "@/store/ModalStore";
 import { approveEIP155Request, rejectEIP155Request } from "@/utils/EIP155RequestHandlerUtil";
 import { signClient } from "@/utils/WalletConnectUtil";
 import { Button, Col, Container, Divider, Modal, Row, Spacer, Text, Textarea } from "@nextui-org/react";
-import { createTRPCProxyClient, httpBatchLink, httpLink } from "@trpc/client";
+import { createTRPCProxyClient, httpLink } from "@trpc/client";
 import { Fragment, useEffect, useState } from "react";
 import type { AppRouter } from "../../../payvc-demo/src/server/routers/_app";
 import superjson from "superjson";

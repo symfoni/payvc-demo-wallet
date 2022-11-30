@@ -9,7 +9,7 @@ import { Button, Col, Container, Divider, Modal, Row, Spacer, Text } from "@next
 
 import { Fragment, useEffect, useState } from "react";
 import { useVcStore } from "../store/VcStore";
-import { checkPayVC, trpcClient } from "../utils/trpc";
+import { checkPayVC, PAY_VC_URL, trpcClient } from "../utils/trpc";
 
 const walletID = "0x777";
 
@@ -84,6 +84,13 @@ export default function SessionRequestCredential() {
 	}
 
 	async function fetchCredentialOffers(requisitionId: string) {
+		// const res = await fetch(`${PAY_VC_URL}/api/credential-offer?requisitionId=${requisitionId}`);
+		// const credentialOffers = await res.json();
+		// if (!credentialOffers.items || credentialOffers.items.length === 0) {
+		// 	throw new Error("No credential offers found");
+		// }
+		// console.log("credentialOffersList", credentialOffers);
+		// return credentialOffers;
 		console.log(requisitionId);
 		const credentialOffersList = await trpcClient.credentialOffer.listBy.query({ requsitionId: requisitionId });
 		if (!credentialOffersList.items || credentialOffersList.items.length === 0) {
@@ -137,7 +144,7 @@ export default function SessionRequestCredential() {
 
 	return (
 		<Fragment>
-			<RequestModalContainer title="Present Credential">
+			<RequestModalContainer title="Request Credential">
 				<ProjectInfoCard metadata={requestSession.peer.metadata} />
 
 				<Divider y={2} />

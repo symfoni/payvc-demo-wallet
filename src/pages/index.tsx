@@ -7,12 +7,12 @@ import { SOLANA_MAINNET_CHAINS, SOLANA_TEST_CHAINS } from "@/data/SolanaData";
 import { POLKADOT_MAINNET_CHAINS, POLKADOT_TEST_CHAINS } from "@/data/PolkadotData";
 import { ELROND_MAINNET_CHAINS, ELROND_TEST_CHAINS } from "@/data/ElrondData";
 import SettingsStore from "@/store/SettingsStore";
-import { Button, Card, Col, Container, Row, Spacer, Text } from "@nextui-org/react";
+import { Button, Card, Col, Container, Row, Spacer, Text, Image } from "@nextui-org/react";
 import { Fragment } from "react";
 import { useSnapshot } from "valtio";
 import { NEAR_TEST_CHAINS } from "@/data/NEARData";
 import { useVcStore } from "../store/VcStore";
-import { DEMO_VERIFIER_URL, PAY_VC_URL, trpcClient } from "../utils/trpc";
+import { DEMO_VERIFIER_URL, PAY_VC_URL } from "../utils/trpc";
 
 export default function HomePage() {
 	const { testNets, eip155Address, cosmosAddress, solanaAddress, polkadotAddress, nearAddress, elrondAddress } =
@@ -20,12 +20,6 @@ export default function HomePage() {
 	const { transactions, vcs, removeTransaction } = useVcStore();
 	console.log(vcs);
 
-	// async function presentCredential(transactionId: string) {
-	// 	const fullfilled = await trpcClient.transaction.fullfill.mutate({ transactionId });
-	// 	if (fullfilled) {
-	// 		removeTransaction(transactionId);
-	// 	}
-	// }
 	return (
 		<Fragment>
 			<PageHeader title="Accounts">
@@ -74,7 +68,13 @@ export default function HomePage() {
 										href={`${PAY_VC_URL}/issuer-service/${requiresParent?.issuer.slug}`}
 										target="_blank"
 										auto
-										disabled={!!hasParentVC}
+										iconRight={
+											hasParentVC ? (
+												<Image src={"icons/checkmark-icon.svg"} width={15} height={15} alt="checkmark" />
+											) : (
+												<Image src={"/icons/arrow-right-icon.svg"} width={15} height={15} alt="session icon" />
+											)
+										}
 									>{`Get ${requiresParent?.credentialType.name}`}</Button>
 									<Spacer></Spacer>
 								</>
@@ -83,10 +83,23 @@ export default function HomePage() {
 								as="a"
 								href={`${PAY_VC_URL}/issuer-service/${transaction.credentialOffer?.issuer.slug}`}
 								target="_blank"
-								disabled={!!hasPrimaryVC}
+								auto
+								iconRight={
+									hasPrimaryVC ? (
+										<Image src={"icons/checkmark-icon.svg"} width={15} height={15} alt="chekcmark" />
+									) : (
+										<Image src={"/icons/arrow-right-icon.svg"} width={15} height={15} alt="session icon" />
+									)
+								}
 							>{`Get ${transaction.credentialOffer?.credentialType.name}`}</Button>
 							<Spacer></Spacer>
-							<Button as="a" target="_blank" href={`${DEMO_VERIFIER_URL}`} disabled={!hasPrimaryVC} color={"success"}>
+							<Button
+								as="a"
+								target="_blank"
+								href={`${PAY_VC_URL}/verifier-service/${transaction.requsition.verifier.slug}`}
+								disabled={!hasPrimaryVC}
+								color={"success"}
+							>
 								{`Present credential to ${transaction.requsition.verifier.name}`}
 							</Button>
 							<Spacer></Spacer>

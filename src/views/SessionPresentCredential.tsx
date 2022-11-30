@@ -9,13 +9,12 @@ import { Button, Card, Col, Container, Divider, Modal, Row, Spacer, Text } from 
 
 import { Fragment, useEffect, useState } from "react";
 import { useVcStore } from "../store/VcStore";
-import { checkPayVC, trpcClient } from "../utils/trpc";
 import { VerifiableCredential } from "@veramo/core";
 
 const walletID = "0x777";
 
 export default function SessionPresentCredential() {
-	const { vcs } = useVcStore();
+	const { vcs, transactions } = useVcStore();
 
 	const requestEvent = ModalStore.state.data?.requestEvent;
 	const requestSession = ModalStore.state.data?.requestSession;
@@ -45,7 +44,7 @@ export default function SessionPresentCredential() {
 					response: {
 						id: requestEvent.id,
 						jsonrpc: "2.0",
-						result: [selectedCredentail.proof.jwt],
+						result: [selectedCredentail.proof.jwt, transactions[0].id], // todo : implement connection between transaction and present credential
 					},
 				});
 				ModalStore.close();
